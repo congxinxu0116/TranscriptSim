@@ -4,11 +4,66 @@
 
 TranscriptSim is an automated NLP technique that quantifies the similarity of treatment transcripts to the treatment protocol. In order to quantify these differences each document first needs to be converted into a numeric form. Each document is converted into a numeric vector where each space in the vector indicates a unique word and the number can indicate the number of times the word appears in the document or the word weight. Two documents are similar if they both contain the same words. Document similarity can be used to detect plagiarism, identify authors, and in this instance measure how well someone is following a script. Once a group of documents have been converted to numeric vectors there are multiple ways to calculate their similarity. The method used by TranscriptSim is cosine similarity. Cosine similarity is the cosine of the angle between two points in a multidimensional space. Where the number of dimensions is equivalent to the number of unique words. Points with smaller angles are more similar. Points with larger angles are more different.
 
-## Author:
-- Ashley Scurlock
-- Kip McCharen
-- Latifa Hasan
-- Congxin (David) Xu
+## Installation and Demo
+Run the following code from your command line:
+```
+pip install TranscriptSim
+```
+After installation, you can call the functions from this package by
+```
+import TranscriptSim.Class
+```
+Then, you should be able to call on any function inside this package: 
+```
+# NOT RUN
+# TranscriptSim.Class.DocSim()
+```
+Below is a quick demo on how to use the function `doc_sim`: 
+```
+import TranscriptSim.Class
+import pandas
+
+d1 = """films adapted from comic books have had plenty of success , whether 
+        they're about superheroes ( batman , superman , spawn ) , or geared 
+        toward kids ( casper ) or the arthouse crowd ( ghost world ) , 
+        but there's never really been a comic book like from hell before . """
+d2 = """films adapted from comic books have had plenty of success , whether 
+        they're about superheroes ( batman , superman , spawn )"""
+
+# Set up a example data frame      
+data = {'document_id': ['123.txt','456.txt'],
+        'study_id': ['Behavioral Study', 'Behavioral Study 1'], 
+        'skill_id': [1, 1], 
+        'type_id': ['script', 'transcript'],
+        'raw_text': [d1, d2]}
+data = pandas.DataFrame(data = data)
+
+# Create the DocSim class object
+DocSim1 = TranscriptSim.Class.DocSim(data = data, 
+				     skill = 'skill_id', 
+				     study = 'study_id',
+				     doc_type = 'type_id',
+				     doc_id = 'document_id',
+				     text = 'raw_text')
+
+# Running the normal_comparison function
+output = DocSim1.normal_comparison(method = 'cosine', 
+				   remove_stopwords = False,
+				   filler_words = [], 
+				   stem = False, 
+				   tfidf = False, 
+				   tfidf_level = 'skill',
+				   lsa = False, 
+				   lsa_n_components = 5)
+
+# Preview
+output.head()
+
+# Successful
+print('Installation is successful!')
+```
+
+
 ______
 
 ## Section 1: Repo File Structure 
@@ -238,66 +293,11 @@ ______
 
 ______
 
-## Section 3: Installation and Demo
-Run the following code from your command line:
-```
-pip install -i https://test.pypi.org/simple/ TranscriptSim
-```
-After installation, you can call the functions from this package by
-```
-import TranscriptSim.DocSim_class
-```
-Then, you should be able to call on any function inside this package: 
-```
-# NOT RUN
-# TranscriptSim.DocSim_class.DocSim.DocSim()
-```
-Below is a quick demo on how to use the function `doc_sim`: 
-```
-import TranscriptSim.DocSim_class
-import pandas
+## Author:
+- Ashley Scurlock
+- Kip McCharen
+- Latifa Hasan
+- Congxin (David) Xu
 
-d1 = """films adapted from comic books have had plenty of success , whether 
-        they're about superheroes ( batman , superman , spawn ) , or geared 
-        toward kids ( casper ) or the arthouse crowd ( ghost world ) , 
-        but there's never really been a comic book like from hell before . """
-d2 = """films adapted from comic books have had plenty of success , whether 
-        they're about superheroes ( batman , superman , spawn )"""
-
-# Set up a example data frame      
-data = {'document_id': ['123.txt','456.txt'],
-        'study_id': ['Behavioral Study', 'Behavioral Study 1'], 
-        'skill_id': [1, 1], 
-        'type_id': ['script', 'transcript'],
-        'raw_text': [d1, d2]}
-data = pandas.DataFrame(data = data)
-
-# Create the DocSim class object
-DocSim1 = TranscriptSim.DocSim_class.DocSim(data = data, 
-					    skill = 'skill_id', 
-					    study = 'study_id',
-					    doc_type = 'type_id',
-					    doc_id = 'document_id',
-					    text = 'raw_text')
-
-# Running the normal_comparison function
-output = DocSim1.normal_comparison(method = 'cosine', 
-				   remove_stopwords = False,
-				   filler_words = [], 
-				   stem = False, 
-				   tfidf = False, 
-				   tfidf_level = 'skill',
-				   lsa = False, 
-				   lsa_n_components = 5)
-
-# Preview
-output.head()
-
-# Successful
-print('Installation is successful!')
-```
-
-______
-
-## Section 4: Thanks
+## Acknowledgement
 Thank you to our sponsors Kylie Anglin, Vivian Wong, and Todd Hall! As well as our advisor Brian Wright!
