@@ -18,7 +18,7 @@ Then, you should be able to call on any function inside this package:
 # NOT RUN
 # TranscriptSim.Class.DocSim()
 ```
-Below is a quick demo on how to use the function `doc_sim`: 
+Below is a quick demo on how to build a `DocSim` class and use the function `normal_comparison()`: 
 ```
 import TranscriptSim.Class
 import pandas
@@ -77,12 +77,14 @@ ______
 |   └── TranscriptSim         # Main Location to store all .py files
 ├── test                    # Unit tests files
 ├── .gitignore              # GitHub Note on ignored files
+├── pyproject.toml          # Minimal Configuration File
+├── setup.cfg               # Package Set Up Information
 ├── LICENSE
 └── README.md
 ```
 ______
 
-## Section 2: Class Structure
+## Class Structure
 
 ## Class: PreprocessCorpusText
 
