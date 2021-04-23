@@ -1,8 +1,8 @@
-# DocSim: Automated NLP Document Similarity 
+# TranscriptSim: Automated NLP Document Similarity 
 
 ## What is it?
 
-Document similarity, or DocSim is an automated NLP technique that quantifies the similarity of treatment transcripts to the treatment protocol. In order to quantify these differences each document first needs to be converted into a numeric form. Each document is converted into a numeric vector where each space in the vector indicates a unique word and the number can indicate the number of times the word appears in the document or the word weight. Two documents are similar if they both contain the same words. Document similarity can be used to detect plagiarism, identify authors, and in this instance measure how well someone is following a script. Once a group of documents have been converted to numeric vectors there are multiple ways to calculate their similarity. The method used by DocSim is cosine similarity. Cosine similarity is the cosine of the angle between two points in a multidimensional space. Where the number of dimensions is equivalent to the number of unique words. Points with smaller angles are more similar. Points with larger angles are more different.
+TranscriptSim is an automated NLP technique that quantifies the similarity of treatment transcripts to the treatment protocol. In order to quantify these differences each document first needs to be converted into a numeric form. Each document is converted into a numeric vector where each space in the vector indicates a unique word and the number can indicate the number of times the word appears in the document or the word weight. Two documents are similar if they both contain the same words. Document similarity can be used to detect plagiarism, identify authors, and in this instance measure how well someone is following a script. Once a group of documents have been converted to numeric vectors there are multiple ways to calculate their similarity. The method used by TranscriptSim is cosine similarity. Cosine similarity is the cosine of the angle between two points in a multidimensional space. Where the number of dimensions is equivalent to the number of unique words. Points with smaller angles are more similar. Points with larger angles are more different.
 
 ______
 
@@ -10,11 +10,9 @@ ______
 
 ```
 .
-├── library                 # Documentation and Visualization files
-├── main                    # Main Package files 
+├── lib                     # Documentation and Visualization files
+├── src                     # Main Package files 
 ├── test                    # Unit tests files
-├── config.py               # Package configuration
-├── setup.py                # Package setup information
 ├── LICENSE 
 └── README.md
 ```
