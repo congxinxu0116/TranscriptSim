@@ -66,14 +66,18 @@ print('Installation is successful!')
 
 ______
 
-## Section 1: Repo File Structure 
+## Repo File Structure 
 
 ```
 .
-├── lib                     # Documentation and Visualization files
-├── src                     # Main Package files 
+├── build                   # Files automatically generated while building the package. 
+|   └── lib
+│       └── TranscriptSim   
+├── src                     # Source files 
+|   └── TranscriptSim         # Main Location to store all .py files
 ├── test                    # Unit tests files
-├── LICENSE 
+├── .gitignore              # GitHub Note on ignored files
+├── LICENSE
 └── README.md
 ```
 ______
@@ -300,4 +304,4 @@ ______
 - Congxin (David) Xu
 
 ## Acknowledgement
-Thank you to our sponsors Kylie Anglin, Vivian Wong, and Todd Hall! As well as our advisor Brian Wright!
+Thank you to our sponsors Kylie Anglin, Vivian Wong, and Todd Hall, as well as our advisor Brian Wright!
