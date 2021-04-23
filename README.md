@@ -4,6 +4,11 @@
 
 TranscriptSim is an automated NLP technique that quantifies the similarity of treatment transcripts to the treatment protocol. In order to quantify these differences each document first needs to be converted into a numeric form. Each document is converted into a numeric vector where each space in the vector indicates a unique word and the number can indicate the number of times the word appears in the document or the word weight. Two documents are similar if they both contain the same words. Document similarity can be used to detect plagiarism, identify authors, and in this instance measure how well someone is following a script. Once a group of documents have been converted to numeric vectors there are multiple ways to calculate their similarity. The method used by TranscriptSim is cosine similarity. Cosine similarity is the cosine of the angle between two points in a multidimensional space. Where the number of dimensions is equivalent to the number of unique words. Points with smaller angles are more similar. Points with larger angles are more different.
 
+## Author:
+- Ashley Scurlock
+- Kip McCharen
+- Latifa Hasan
+- Congxin (David) Xu
 ______
 
 ## Section 1: Repo File Structure 
@@ -269,11 +274,11 @@ data = pandas.DataFrame(data = data)
 
 # Create the DocSim class object
 DocSim1 = TranscriptSim.DocSim_class.DocSim(data = data, 
-										    skill = 'skill_id', 
-										    study = 'study_id',
-										    doc_type = 'type_id',
-										    doc_id = 'document_id',
-										    text = 'raw_text')
+					    skill = 'skill_id', 
+					    study = 'study_id',
+					    doc_type = 'type_id',
+					    doc_id = 'document_id',
+					    text = 'raw_text')
 
 # Running the normal_comparison function
 output = DocSim1.normal_comparison(method = 'cosine', 
