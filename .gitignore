@@ -1,0 +1,7 @@
+
+*.whl
+*.gz
+src/TranscriptSim.egg-info/dependency_links.txt
+src/TranscriptSim.egg-info/PKG-INFO
+src/TranscriptSim.egg-info/SOURCES.txt
+src/TranscriptSim.egg-info/top_level.txt
