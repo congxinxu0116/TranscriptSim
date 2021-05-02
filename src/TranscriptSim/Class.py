@@ -202,6 +202,8 @@ class DocSim: #defining the class
         
         # Lemmantize by converting words to a simpler form 
         elif lemm:
+            if filler_words == None:
+                filler_words = [filler_words]
             
             # text = text.apply(lambda x: nltk.tokenize.casual.casual_tokenize(x)) 
             text = text.apply(lambda x: nltk.tokenize.word_tokenize(x)) 
