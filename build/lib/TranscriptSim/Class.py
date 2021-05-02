@@ -67,7 +67,7 @@ class DocSim: #defining the class
     def __init__(self, data, skill, study, doc_type, doc_id, text):
 
         # Initialize the attributes
-        self.data = data
+        self.data = data.fillna("NA")
         self.doc_id = doc_id
         self.skill = skill
         self.study = study
@@ -115,7 +115,8 @@ class DocSim: #defining the class
                       tfidf_level = 'skill', 
                       lsa = False, 
                       lsa_n_components = 2,
-                      ngram = 1):
+                      ngram = 1,
+                      remove_punctuation = None):
         """
         Parameters
         ----------
@@ -155,90 +156,125 @@ class DocSim: #defining the class
             
         # Isolate text column as lowercase
         text = self.data[self.text].str.lower()
-    
+        
+        # Convert filler words from list to a set
+        filler_words = set(filler_words)
+
         # Define a set of stopwords
         if remove_stopwords:
-            filler_words = set(nltk.corpus.stopwords.words('english')).\
-                union(set(string.punctuation), set(filler_words))
-        
-        # Define stopwords as None 
-        else:
-            filler_words = None
+            filler_words = filler_words.union(\
+                set(nltk.corpus.stopwords.words('english')))
 
-        # Stem and remove stopwords that are in filler_words
+        # Add punctuation to stopwords, if applicable
+        if (remove_punctuation is None and remove_stopwords) \
+            or remove_punctuation:
+            filler_words = filler_words.union(set(string.punctuation))
+        
+        # If no items have been added to filler words, 
+        # define stopwords as None 
+        if not filler_words:
+            filler_words = None
+        
+        # Set aside ngram filler words to remove later
+        ngram_fillers = []
+        if not filler_words is None and len(filler_words) > 0:
+            ngram_fillers = [x for x in filler_words if " " in x]
+
+        # print(filler_words)
+
+        # Stem words by cutting off at the root of the word
         if stem:
             if filler_words == None:
                 filler_words = [filler_words]
             # Tokenize
-            text = text.apply(lambda x: nltk.tokenize.casual.casual_tokenize(x)) 
-            
-            # Remove stopwords and stem
-            text = text.apply(lambda x: [nltk.stem.SnowballStemmer('english').\
-                                        stem(item) for item in x \
-                                        if item not in filler_words])
-            
-            # Combine
-            text = text.apply(lambda x: ' '.join([item for item in x]))
-            
-            # Prevent removing stop words twice
+            # text = text.apply(lambda x: nltk.tokenize.casual.casual_tokenize(x)) 
+            text = text.apply(lambda x: nltk.tokenize.word_tokenize(x)) 
+
+            # Set up the stemmer and apply stemming
+            stemmer = nltk.stem.SnowballStemmer('english')
+            text = text.apply(lambda x: [stemmer.stem(item) for item in x])
+
+            # Remove filler words if possible, and join together
+            text = text.apply(lambda x: \
+                ' '.join([y for y in x if y not in filler_words]))
+            # Ensure filler words are not applied multiple times
             filler_words = None
         
-        # Lemmantize and remove stopwords that are in filler_words
+        # Lemmantize by converting words to a simpler form 
         elif lemm:
             
-            if filler_words == None:
-                filler_words = [filler_words]
-            
-            # Set up the lemmatizer
+            # text = text.apply(lambda x: nltk.tokenize.casual.casual_tokenize(x)) 
+            text = text.apply(lambda x: nltk.tokenize.word_tokenize(x)) 
+
+            # Set up the lemmatizer and apply
             wnl = nltk.stem.WordNetLemmatizer()
-            text = text.apply(lambda x: nltk.tokenize.casual.casual_tokenize(x)) 
+            text = text.apply(lambda x: [wnl.lemmatize(item) for item in x])
 
-            # remove stopwords and lemmatize
-            text = text.apply(lambda x: [wnl.lemmatize(item) for item in x \
-                                        if item not in filler_words])
+            # Remove filler words if possible, and join together
+            text = text.apply(lambda x: \
+                ' '.join([y for y in x if y not in filler_words]))
+            # Ensure filler words are not applied multiple times
+            filler_words = None
 
-            text = text.apply(lambda x: ' '.join([item for item in x]))
-            
-            # Prevent removing stop words twice
-            filler_words = None 
+        # Remove ngram > 1 stop words, filler words, 
+        # and/or punctuation that are in filler_words
+        if ngram_fillers:
+            for nf in ngram_fillers:
+                text = text.apply(lambda x: x.lower().replace(nf.lower(), " "))
 
         # Vectorize the text: using tf-idf weights 
         if tfidf:
+            # Create default TFIDFVectorizer input parameters
+            tf_params = {'lowercase': True, 
+                        'stop_words': filler_words,
+                        'ngram_range': (1, ngram)}
             
+            # Lookup dictionary for alternative TF-IDF parameter settings
+            tfopts = {"bool": ["binary", True], 
+                    "l1": ["norm", "l1"],
+                    "l2": ["norm", "l2"],
+                    "logn": ["smooth_idf", True],
+                    "sub": ["sublinear_tf", True],
+                    "tf_only": ["use_idf", False]}
+            
+            # Handle alternative tf-idf options using lookup dict 
+            if tfidf in tfopts.keys():
+                b = tfopts[tfidf]
+                tf_params[b[0]] = b[1]
+
             # Handle different level of TF-IDF
             if tfidf_level == 'full':
                 # Tfidf Vectorizer
+                # vectorizer = sklearn.feature_extraction.text.\
+                #     TfidfVectorizer(lowercase = True, 
+                #         stop_words = filler_words,
+                #         ngram_range = (1, ngram))
                 vectorizer = sklearn.feature_extraction.text.\
-                    TfidfVectorizer(lowercase = True, stop_words = filler_words)
+                    TfidfVectorizer(**tf_params)
                 vectors = vectorizer.fit_transform(text.tolist())
                 
                 # Save feature names
                 self.tfidf_factors = [('full', vectorizer.get_feature_names())]
             
-            # TF-IDF at the Skill Level
-            elif tfidf_level == 'skill':
-                df = df.sort_values(self.skill)
-                vectors = self.tfidf_preprocessing(level = self.skill, 
-                                                   filler_words = filler_words,
-                                                   text = text)
-            # TF-IDF at the Study Level
-            elif tfidf_level == 'study':                
-                df = df.sort_values(self.study)
-                vectors = self.tfidf_preprocessing(level = self.study, 
-                                                   filler_words = filler_words,
-                                                   text = text)
-            # TF-IDF at the Document Level
-            elif tfidf_level == 'document':                
-                df = df.sort_values(self.doc_id)
-                vectors = self.tfidf_preprocessing(level = self.doc_id, 
-                                                   filler_words = filler_words,
-                                                   text = text)
+            # TF-IDF at each appropriate Level
+            else:
+                level_opts = {'skill': self.skill,
+                            'study': self.study,
+                            'document': self.doc_id}
+                df = df.sort_values(level_opts[tfidf_level])
+                vectors = self.tfidf_preprocessing(level = level_opts[tfidf_level], 
+                                                   text = text,
+                                                   tfidf_params = tf_params)
+                                                #    filler_words = filler_words,
+                                                #    ngram = ngram,
         
         # If tf-idf is not enabled, vectorize the text using word counts
         else:
             # Count vectorize
             vectorizer = sklearn.feature_extraction.text.\
-                    CountVectorizer(lowercase = True, stop_words = filler_words)
+                    CountVectorizer(lowercase = True, 
+                        stop_words = filler_words,
+                        ngram_range = (1, ngram))
             vectors = vectorizer.fit_transform(text.tolist())
             
             # Save feature names
@@ -283,7 +319,8 @@ class DocSim: #defining the class
 
         return df
 
-    def tfidf_preprocessing(self, level, text, filler_words):
+    def tfidf_preprocessing(self, level, text, tfidf_params = None):
+        #filler_words, ngram = 1, 
         """
         Apply TF-IDF at different level of hierarchy
         
@@ -296,9 +333,14 @@ class DocSim: #defining the class
         filler_words: list
             A list of filler words to be removed from TF-IDF process
         """
+        
+        less_params = tfidf_params.copy()
+        leaveout = ['binary', 'norm', 'smooth_idf', 'sublinear_tf', 'use_idf']
+        less_params = {k: less_params[k] for k in less_params.keys() if k not in leaveout}
+
         # Get all unique words for mapping
         vectorizer = sklearn.feature_extraction.text.\
-                CountVectorizer(lowercase = True, stop_words = filler_words)
+                CountVectorizer(**less_params)
         vectors = vectorizer.fit_transform(text.tolist())
         
         # Save feature names as a dictionary of Data Frame
@@ -314,16 +356,19 @@ class DocSim: #defining the class
         vectors = list()
         self.tfidf_factors = list()
 
-        for index in self.data[level].unique():                  
+        for index in self.data[level].unique():
+            # if not index or index is numpy.nan:
+            #     continue
 
             # Extract the raw text for this study group
             tmp_text = self.data.loc[
                 self.data[level] == index, [self.doc_id, self.text]]
+            # print(index, len(tmp_text.index))
 
             # Train and Fit TF-IDF 
             vectorizer = sklearn.feature_extraction.text.\
-                TfidfVectorizer(lowercase = True, 
-                                stop_words = filler_words)
+                TfidfVectorizer(**tfidf_params)
+
             tmp_vectors = vectorizer.fit_transform(
                 tmp_text[self.text].tolist())
 
@@ -336,12 +381,20 @@ class DocSim: #defining the class
                                       index = tmp_factors)
             
             # Match with all unique words for identical structure
-            vectors += df_all \
+            vectors2 = df_all \
                         .join(df_tmp, how = "left") \
-                        .fillna(0) \
-                        .to_numpy() \
+                        .fillna(0)
+            vectors += vectors2.to_numpy() \
                         .T \
                         .tolist()
+            
+            # # each row is a unique word, each column is a unique document
+            # vocab = pandas.DataFrame.from_dict(vectorizer.vocabulary_, 
+            #         orient="index", columns=["count"])
+            # vectors2.index.name = "i"
+            # vocab.index.name = "i"
+            # vocab = vocab.merge(vectors2, how="outer", on='i')
+            # print(vocab.head())
 
             # Store features
             self.tfidf_factors += [(index, tmp_factors)]
@@ -405,7 +458,8 @@ class DocSim: #defining the class
                                   tfidf_level,
                                   lsa, 
                                   lsa_n_components,
-                                  ngram):
+                                  ngram,
+                                  remove_punctuation):
 
         # Check if the method is coded correctly
         # if method not in ('cosine'):
@@ -421,7 +475,9 @@ class DocSim: #defining the class
             raise SystemExit("Incorrect 'lemm' used. Use True or False")
         if stem and lemm:
             raise SystemExit("Stemmed text may not also be lemmatized.")
-        if tfidf not in (True, False):
+        if remove_punctuation not in (True, False, None):
+            raise SystemExit("Incorrect 'remove_punctuation' used. Use True or False")
+        if tfidf not in (True, False, "bool", "l1", "l2", "logn", "sub", "tf_only"):
             raise SystemExit("Incorrect 'tfidf' used. Use True or False")
         if tfidf_level not in ('full', 'skill', 'study', 'document'):
             raise SystemExit("Incorrect 'tfidf_level' used. Use \
@@ -467,7 +523,8 @@ class DocSim: #defining the class
                           tfidf_level = 'skill', 
                           lsa = False, 
                           lsa_n_components = 2,
-                          ngram = 1):
+                          ngram = 1,
+                          remove_punctuation = None):
         
         """
         Get the cosine similarity between each transcripts to the benchmark
@@ -483,7 +540,8 @@ class DocSim: #defining the class
                                        tfidf_level = tfidf_level, 
                                        lsa = lsa,
                                        lsa_n_components = lsa_n_components,
-                                       ngram = ngram)
+                                       ngram = ngram,
+                                       remove_punctuation = remove_punctuation)
 
         # NLP Preprocessing: 
         self.document_matrix = self.preprocessing(remove_stopwords = remove_stopwords, 
@@ -494,7 +552,8 @@ class DocSim: #defining the class
                                                   tfidf_level = tfidf_level, 
                                                   lsa = lsa,
                                                   lsa_n_components = lsa_n_components,
-                                                  ngram = ngram)
+                                                  ngram = ngram,
+                                                  remove_punctuation = remove_punctuation)
         # Sufficiency Check
         if self.document_matrix.empty:
             raise SystemExit("Insufficient data to process.")      
@@ -521,7 +580,7 @@ class DocSim: #defining the class
                 # Extract the transcript for this skill
                 tmp_transcript = transcript.\
                     loc[self.document_matrix[self.skill] == skills]
-
+                
                 # Calculate the similarity score and store it
                 similarity_score = numpy.concatenate([similarity_score,  
                     sklearn.metrics.pairwise.\
@@ -529,6 +588,41 @@ class DocSim: #defining the class
                                       self.create_sparse_matrix(tmp_transcript),
                                       dense_output = True). \
                     reshape(1, -1)[0]])
+
+            # Write the similarity score back to the orignial DF
+            transcript['similarity_score'] = \
+                similarity_score.reshape(-1, 1) #.round(6)
+
+            # Return the output data frame
+            return(transcript)
+
+        else:
+
+            # Create an empty list to store the similarity scores
+            similarity_score = numpy.array([])
+
+            # iterate over different skills
+            for skills in self.get_skill():
+                
+                # Extract the script for this skill
+                tmp_script = self.document_matrix.\
+                    loc[(self.document_matrix[self.doc_type] == 'script') & \
+                        (self.document_matrix[self.skill] == skills)]
+                
+                # Extract the transcript for this skill
+                tmp_transcript = transcript.\
+                    loc[self.document_matrix[self.skill] == skills]
+
+                primary_distance = sklearn.metrics.pairwise_distances(
+                                    X=self.create_sparse_matrix(tmp_transcript),
+                                    Y=self.create_sparse_matrix(tmp_script),
+                                    metric = method, #"cosine", "euclidean", 'manhattan'
+                                    force_all_finite = False) #,
+                                    #dense_output = True)
+
+                # Calculate the similarity score and store it
+                similarity_score = numpy.concatenate([similarity_score,  
+                    primary_distance.reshape(1, -1)[0]])
 
             # Write the similarity score back to the orignial DF
             transcript['similarity_score'] = \
@@ -549,7 +643,8 @@ class DocSim: #defining the class
                             tfidf_level = 'skill',
                             lsa = False, 
                             lsa_n_components = 2,
-                            ngram = 1):
+                            ngram = 1,
+                            remove_punctuation = None):
         """
         Get the cosine similarity among each transcripts within skills
         """
@@ -562,7 +657,9 @@ class DocSim: #defining the class
                                        tfidf_level = tfidf_level, 
                                        lsa = lsa,
                                        lsa_n_components = lsa_n_components,
-                                       ngram = ngram)
+                                       ngram = ngram,
+                                       remove_punctuation = remove_punctuation
+                                       )
 
         # NLP Preprocessing: 
         self.document_matrix = self.preprocessing(remove_stopwords = remove_stopwords, 
@@ -573,7 +670,8 @@ class DocSim: #defining the class
                                                   tfidf_level = tfidf_level, 
                                                   lsa = lsa,
                                                   lsa_n_components = lsa_n_components,
-                                                  ngram = ngram)
+                                                  ngram = ngram,
+                                                  remove_punctuation = remove_punctuation)
         # Sufficiency Check
         if self.document_matrix.empty:
             raise SystemExit("Insufficient data to process.")      
@@ -625,7 +723,8 @@ class DocSim: #defining the class
                                     tfidf_level = 'skill',
                                     lsa = False, 
                                     lsa_n_components = 2,
-                                    ngram = 1):
+                                    ngram = 1,
+                                    remove_punctuation = None):
         """
         Get the average similarity score for each study 
         """
@@ -639,7 +738,8 @@ class DocSim: #defining the class
                                         tfidf_level = tfidf_level, 
                                         lsa = lsa, 
                                         lsa_n_components = lsa_n_components,
-                                        ngram = ngram)
+                                        ngram = ngram,
+                                        remove_punctuation = remove_punctuation)
 
         return output[[self.study, 'similarity_score']].\
                groupby([self.study]).\
@@ -658,7 +758,8 @@ class DocSim: #defining the class
                                                  tfidf_level = 'skill',
                                                  lsa = False, 
                                                  lsa_n_components = 2,
-                                                 ngram = 1):
+                                                 ngram = 1,
+                                                 remove_punctuation = None):
         """
         Get the average similarity score for each study 
         """
@@ -671,7 +772,8 @@ class DocSim: #defining the class
                                        tfidf_level = tfidf_level, 
                                        lsa = lsa,
                                        lsa_n_components = lsa_n_components,
-                                       ngram = ngram)
+                                       ngram = ngram,
+                                       remove_punctuation = remove_punctuation)
 
         # NLP Preprocessing: 
         self.document_matrix = self.preprocessing(remove_stopwords = remove_stopwords, 
@@ -682,7 +784,8 @@ class DocSim: #defining the class
                                                   tfidf_level = tfidf_level, 
                                                   lsa = lsa,
                                                   lsa_n_components = lsa_n_components,
-                                                  ngram = ngram)
+                                                  ngram = ngram,
+                                                  remove_punctuation = remove_punctuation)
         
         # Remove non-transcripts, sort by skill, study
         tmp_data = self.document_matrix.copy().\
@@ -739,7 +842,8 @@ class DocSim: #defining the class
                                                  tfidf_level = 'skill',
                                                  lsa = False, 
                                                  lsa_n_components = 2,
-                                                 ngram = 1):
+                                                 ngram = 1,
+                                                 remove_punctuation = None):
         """
         Get the average similarity score for each study 
         """
@@ -752,7 +856,8 @@ class DocSim: #defining the class
                                        tfidf_level = tfidf_level, 
                                        lsa = lsa,
                                        lsa_n_components = lsa_n_components,
-                                       ngram = ngram)
+                                       ngram = ngram,
+                                       remove_punctuation = remove_punctuation)
 
         # NLP Preprocessing: 
         self.document_matrix = self.preprocessing(remove_stopwords = remove_stopwords, 
@@ -763,7 +868,8 @@ class DocSim: #defining the class
                                                   tfidf_level = tfidf_level, 
                                                   lsa = lsa,
                                                   lsa_n_components = lsa_n_components,
-                                                  ngram = ngram)
+                                                  ngram = ngram,
+                                                  remove_punctuation = remove_punctuation)
         
         # Remove non-transcripts, sort by skill, study
         tmp_data = self.document_matrix.copy().\
@@ -963,7 +1069,7 @@ class PreprocessCorpusText:
             raise SystemExit(errmsg)
         if not isinstance(obj.df, pandas.DataFrame):
             raise SystemExit(errmsg)
-        print(obj.curr_txt)
+        # print(obj.curr_txt)
         # concatenate text by speaker
         speak_red = obj.df.groupby([speaker, "doc_id"])\
             [obj.curr_txt].apply(' '.join).reset_index()
